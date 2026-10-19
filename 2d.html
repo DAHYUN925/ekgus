@@ -1,0 +1,1222 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>2D 스피드 라이더: 저출산·고령사회 허들 도장깨기</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            margin: 0;
+            padding: 0;
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #0f172a;
+            color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #app-container {
+            position: relative;
+            width: 100%;
+            max-width: 960px;
+            height: 100%;
+            max-height: 640px;
+            background: #020617;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border-radius: 16px;
+            border: 2px solid #334155;
+        }
+
+        #canvas-container {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        /* Overlay UI Screens */
+        .overlay-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(15, 23, 42, 0.92);
+            backdrop-filter: blur(8px);
+            z-index: 20;
+            padding: 24px;
+            text-align: center;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        h1 {
+            font-size: 2.1rem;
+            color: #fbbf24;
+            margin-bottom: 8px;
+            text-shadow: 0 2px 10px rgba(251, 191, 36, 0.4);
+        }
+
+        h2 {
+            font-size: 1.05rem;
+            color: #94a3b8;
+            margin-bottom: 24px;
+            font-weight: 400;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: #ffffff;
+            border: none;
+            padding: 14px 28px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border-radius: 9999px;
+            cursor: pointer;
+            box-shadow: 0 4px 14px rgba(245, 158, 11, 0.4);
+            transition: all 0.2s ease;
+            margin: 6px;
+            min-width: 200px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(245, 158, 11, 0.6);
+        }
+
+        .btn:active {
+            transform: translateY(1px);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #475569, #334155);
+            box-shadow: 0 4px 14px rgba(71, 85, 105, 0.4);
+        }
+
+        /* HUD Header */
+        #hud {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+            background: linear-gradient(180deg, rgba(2, 6, 23, 0.85) 0%, rgba(2, 6, 23, 0) 100%);
+            pointer-events: none;
+        }
+
+        .hud-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .hud-label {
+            font-size: 0.72rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .hud-value {
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: #ffffff;
+        }
+
+        #speed-badge {
+            background: #2563eb;
+            color: #fff;
+            padding: 5px 12px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            transition: background-color 0.3s;
+            box-shadow: 0 0 10px rgba(37, 99, 235, 0.5);
+        }
+
+        /* Quiz Banner & Option Select UI */
+        #quiz-container {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 92%;
+            max-width: 800px;
+            background: rgba(15, 23, 42, 0.94);
+            border: 2px solid #38bdf8;
+            border-radius: 18px;
+            padding: 18px 20px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7), 0 0 20px rgba(56, 189, 248, 0.25);
+            z-index: 15;
+            transition: all 0.3s ease;
+        }
+
+        #quiz-question {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #f8fafc;
+            line-height: 1.4;
+            margin-bottom: 14px;
+            word-break: keep-all;
+        }
+
+        #quiz-options-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+
+        .option-btn {
+            background: rgba(30, 41, 59, 0.9);
+            border: 2px solid #475569;
+            border-radius: 12px;
+            padding: 12px 10px;
+            color: #ffffff;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 60px;
+        }
+
+        .option-btn:hover {
+            border-color: #38bdf8;
+            background: rgba(56, 189, 248, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .option-btn:active {
+            transform: translateY(1px);
+        }
+
+        .option-num {
+            font-size: 0.75rem;
+            color: #fbbf24;
+            font-weight: 800;
+            margin-bottom: 3px;
+        }
+
+        /* Combo Popup */
+        #combo-popup {
+            position: absolute;
+            top: 35%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.5);
+            font-size: 2.2rem;
+            font-weight: 900;
+            font-style: italic;
+            color: #fbbf24;
+            text-shadow: 0 0 15px rgba(251, 191, 36, 0.8), 0 0 30px rgba(0,0,0,0.8);
+            opacity: 0;
+            pointer-events: none;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease;
+            z-index: 12;
+            text-align: center;
+        }
+
+        #combo-popup.show {
+            transform: translate(-50%, -50%) scale(1.1);
+            opacity: 1;
+        }
+
+        /* Review Modal */
+        .modal-content {
+            background: #0f172a;
+            border-radius: 16px;
+            padding: 20px;
+            width: 100%;
+            max-width: 600px;
+            max-height: 55vh;
+            overflow-y: auto;
+            text-align: left;
+            margin-bottom: 16px;
+            border: 1px solid #334155;
+        }
+
+        .review-item {
+            background: #1e293b;
+            border-left: 4px solid #f43f5e;
+            padding: 12px 14px;
+            margin-bottom: 10px;
+            border-radius: 6px;
+        }
+
+        .review-q {
+            font-weight: bold;
+            margin-bottom: 4px;
+            color: #f8fafc;
+            font-size: 0.95rem;
+        }
+
+        .review-a {
+            color: #34d399;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .review-desc {
+            color: #94a3b8;
+            font-size: 0.85rem;
+            margin-top: 4px;
+            line-height: 1.4;
+        }
+
+        @media (max-width: 680px) {
+            #quiz-options-grid { grid-template-columns: 1fr; }
+            #quiz-question { font-size: 0.95rem; }
+            .option-btn { min-height: 44px; }
+            h1 { font-size: 1.6rem; }
+            .hud-value { font-size: 1rem; }
+            #quiz-container { bottom: 12px; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="app-container">
+    <div id="canvas-container">
+        <canvas id="gameCanvas"></canvas>
+    </div>
+
+    <!-- HUD Header -->
+    <div id="hud">
+        <div class="hud-item">
+            <span class="hud-label">체력</span>
+            <span id="hud-hp" class="hud-value">❤️❤️❤️</span>
+        </div>
+        <div class="hud-item">
+            <span class="hud-label">말의 속도</span>
+            <span id="speed-badge">LV.1 스피드 구보</span>
+        </div>
+        <div class="hud-item">
+            <span class="hud-label">남은 허들</span>
+            <span id="hud-hurdle" class="hud-value" style="color: #38bdf8;">20 / 20</span>
+        </div>
+        <div class="hud-item">
+            <span class="hud-label">점수</span>
+            <span id="hud-score" class="hud-value">0</span>
+        </div>
+        <div class="hud-item">
+            <span class="hud-label">연속 정답(COMBO)</span>
+            <span id="hud-combo" class="hud-value" style="color:#fbbf24;">0</span>
+        </div>
+    </div>
+
+    <!-- Quiz Banner -->
+    <div id="quiz-container" class="hidden">
+        <div id="quiz-question">다가오는 2D 허들 문제를 보고 정답을 맞춰 점프하세요!</div>
+        <div id="quiz-options-grid">
+            <button class="option-btn" data-opt="0">
+                <span class="option-num">1번 선택지</span>
+                <span class="option-text" id="opt-text-0">보기1</span>
+            </button>
+            <button class="option-btn" data-opt="1">
+                <span class="option-num">2번 선택지</span>
+                <span class="option-text" id="opt-text-1">보기2</span>
+            </button>
+            <button class="option-btn" data-opt="2">
+                <span class="option-num">3번 선택지</span>
+                <span class="option-text" id="opt-text-2">보기3</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Popup -->
+    <div id="combo-popup">COMBO x2!</div>
+
+    <!-- Start Screen -->
+    <div id="screen-start" class="overlay-screen">
+        <h1>🏇 2D 스피드 라이더</h1>
+        <h2>저출산·고령사회 20문항 도장깨기 승마 게임</h2>
+        <div style="background: rgba(30, 41, 59, 0.85); padding: 18px; border-radius: 14px; margin-bottom: 20px; text-align: left; max-width: 480px; font-size: 0.9rem; line-height: 1.65; border: 1px solid #334155;">
+            💡 <strong>스피디한 2D 아케이드 승마 안내:</strong><br>
+            - 트랙을 빠르고 활기차게 달리며 <strong>총 20개의 저출산·고령사회 허들</strong>을 해결하세요!<br>
+            - 정답을 선택하면 말이 <strong>스피디하게 질주하여 멋지게 허들을 점프</strong>합니다.<br>
+            - 오답 시 허들에 걸려 부딪히며 체력이 1 감소합니다.<br>
+            - 콤보를 계속 이어가 최고 속도 갤럽 모드를 달성하세요!
+        </div>
+        <button id="btn-start" class="btn">2D 경기 시작</button>
+        <button id="btn-howto" class="btn btn-secondary">개념 공부하기</button>
+    </div>
+
+    <!-- Result Screen -->
+    <div id="screen-result" class="overlay-screen hidden">
+        <h1 id="result-title">경기 완료!</h1>
+        <h2 id="result-subtitle">수고하셨습니다. 학습 결과를 확인해보세요.</h2>
+        
+        <div style="margin-bottom: 18px; font-size: 1.05rem; line-height: 1.8;">
+            최종 점수: <span id="res-score" style="color: #fbbf24; font-weight: bold;">0</span>점<br>
+            최고 달성 속도: <span id="res-speed" style="color: #38bdf8; font-weight: bold;">LV.1</span><br>
+            최대 연속 정답: <span id="res-combo" style="color: #34d399; font-weight: bold;">0</span>회
+        </div>
+
+        <div class="modal-content" id="review-container">
+            <h3 style="margin-bottom: 12px; color: #fbbf24; text-align: center;">📝 틀린 문제 복습 노트</h3>
+            <div id="review-list">오답이 없습니다! 완벽합니다.</div>
+        </div>
+
+        <button id="btn-restart" class="btn">다시 도전하기</button>
+    </div>
+
+    <!-- Study Concept Notes -->
+    <div id="screen-study" class="overlay-screen hidden">
+        <h1 style="color:#60a5fa;">📚 저출산·고령사회 핵심 개념 총정리</h1>
+        <div class="modal-content" style="text-align: left; font-size: 0.88rem; line-height: 1.65;">
+            <p style="color:#fbbf24; font-weight:bold;">1. 고령 인구 비율 기준 (65세 이상)</p>
+            <ul style="margin-left: 18px; margin-bottom: 12px;">
+                <li>고령화사회: 7% 이상 14% 미만</li>
+                <li>고령사회: 14% 이상 20% 미만</li>
+                <li>초고령사회: 20% 이상</li>
+            </ul>
+            <p style="color:#fbbf24; font-weight:bold;">2. 저출산·고령화의 원인</p>
+            <ul style="margin-left: 18px; margin-bottom: 12px;">
+                <li>저출산: 주거비 및 양육·교육비 부담, 결혼관 변화, 일·가정 양립의 어려움</li>
+                <li>고령화: 의학 기술 발전 및 생활 수준 향상에 따른 평균 수명 연장</li>
+            </ul>
+            <p style="color:#fbbf24; font-weight:bold;">3. 파급 효과 및 해결 대안</p>
+            <ul style="margin-left: 18px;">
+                <li>생산연령인구(15~64세) 감소로 인한 경제 성장 감소 및 노년부양비 증가</li>
+                <li>해결책: 육아휴직제 확대, 청년 주거 지원, 정년 연장 및 노인 일자리 창출</li>
+            </ul>
+        </div>
+        <button id="btn-close-study" class="btn">메인으로 돌아가기</button>
+    </div>
+</div>
+
+<script>
+// ==========================================
+// 1. Web Audio API 기반 오디오 시스템
+// ==========================================
+class SoundManager {
+    constructor() {
+        this.ctx = null;
+        this.initialized = false;
+    }
+
+    init() {
+        if (this.initialized) return;
+        try {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            this.ctx = new AudioContext();
+            this.initialized = true;
+        } catch (e) {
+            console.warn("Web Audio API not supported", e);
+        }
+    }
+
+    playGallop(speedLevel = 1) {
+        if (!this.ctx) return;
+        if (this.ctx.state === 'suspended') this.ctx.resume();
+
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(130 + speedLevel * 15, now);
+        osc.frequency.exponentialRampToValueAtTime(35, now + 0.05);
+
+        gain.gain.setValueAtTime(0.18, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.05);
+    }
+
+    playJump() {
+        if (!this.ctx) return;
+        if (this.ctx.state === 'suspended') this.ctx.resume();
+
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(240, now);
+        osc.frequency.exponentialRampToValueAtTime(800, now + 0.25);
+
+        gain.gain.setValueAtTime(0.28, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.25);
+    }
+
+    playCorrect() {
+        if (!this.ctx) return;
+        if (this.ctx.state === 'suspended') this.ctx.resume();
+
+        const now = this.ctx.currentTime;
+        const notes = [523.25, 659.25, 783.99, 1046.50];
+        notes.forEach((freq, idx) => {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(freq, now + idx * 0.07);
+
+            gain.gain.setValueAtTime(0.2, now + idx * 0.07);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.07 + 0.2);
+
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+
+            osc.start(now + idx * 0.07);
+            osc.stop(now + idx * 0.07 + 0.2);
+        });
+    }
+
+    playWrong() {
+        if (!this.ctx) return;
+        if (this.ctx.state === 'suspended') this.ctx.resume();
+
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(200, now);
+        osc.frequency.linearRampToValueAtTime(60, now + 0.35);
+
+        gain.gain.setValueAtTime(0.25, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.35);
+    }
+}
+
+const sounds = new SoundManager();
+
+// ==========================================
+// 2. 풍부한 20개 저출산·고령화 퀴즈 데이터베이스
+// ==========================================
+const QUIZ_DATABASE = [
+    {
+        question: "전체 인구 중 65세 이상 인구 비율이 14% 이상인 사회는?",
+        options: ["고령화사회", "고령사회", "초고령사회"],
+        answer: 1,
+        desc: "65세 이상 인구 비율: 7% 이상(고령화사회), 14% 이상(고령사회), 20% 이상(초고령사회)"
+    },
+    {
+        question: "65세 이상 고령 인구 비중이 20% 이상을 차지하는 사회는?",
+        options: ["고령사회", "초고령사회", "청년사회"],
+        answer: 1,
+        desc: "고령 인구가 전체의 20% 이상을 넘으면 초고령사회에 속합니다."
+    },
+    {
+        question: "다음 중 저출산 현상의 주요 원인으로 가장 적절한 것은?",
+        options: ["양육비 및 주거비 부담 증가", "유소년 인구 급증", "청년층의 조기 정년퇴직"],
+        answer: 0,
+        desc: "높은 주거비와 교육·양육비 부담 가중은 저출산 현상의 핵심 원인입니다."
+    },
+    {
+        question: "생산연령인구(15~64세)에 속하는 나이 범위로 올바른 것은?",
+        options: ["0~14세", "15~64세", "65세 이상"],
+        answer: 1,
+        desc: "생산연령인구는 경제활동이 가능한 만 15세부터 64세까지의 인구입니다."
+    },
+    {
+        question: "저출산·고령화 현상이 국정과 경제에 미치는 영향으로 알맞은 것은?",
+        options: ["생산연령인구 감소로 인한 경제 성장 둔화", "초등학교 수와 교원 수요 증가", "사회보장비용(연금·의료비) 지출 감소"],
+        answer: 0,
+        desc: "일할 수 있는 생산 인구가 감소하면서 경제 성장이 둔화되고 노동력이 부족해집니다."
+    },
+    {
+        question: "저출산 문제를 극복하기 위한 대표적인 제도적 정책은?",
+        options: ["육아휴직 확대 및 일·가정 양립 지원", "노령연금 지출 대폭 축소", "청년 주거 지원 및 대출 축소"],
+        answer: 0,
+        desc: "일과 육아를 병행할 수 있는 육아휴직 및 돌봄 지원 강화가 핵심 정책입니다."
+    },
+    {
+        question: "노년 부양비를 올바르게 나타낸 공식은?",
+        options: ["(65세 이상 인구 / 15~64세 인구) × 100", "(유소년 인구 / 노인 인구) × 100", "(생산연령인구 / 전체 인구) × 100"],
+        answer: 0,
+        desc: "노년 부양비는 생산연령인구(15~64세) 100명이 부양해야 하는 노인 인구의 수입니다."
+    },
+    {
+        question: "고령화사회(Aging Society)의 기준 고령 인구 비율은?",
+        options: ["7% 이상", "14% 이상", "20% 이상"],
+        answer: 0,
+        desc: "65세 이상 인구가 7% 이상 14% 미만일 때 고령화사회라 부릅니다."
+    },
+    {
+        question: "고령화 현상이 빠르게 진행되는 원인 중 하나는 무엇인가요?",
+        options: ["의학 기술 발전과 평균 수명 연장", "유소년 출생아 수의 폭발적 증가", "생산연령인구의 해외 유출"],
+        answer: 0,
+        desc: "의료 기술의 발달과 생활 수준 향상으로 평균 수명이 늘어나 고령 인구가 늘었습니다."
+    },
+    {
+        question: "합계 출산율(Total Fertility Rate)의 의미로 올바른 것은?",
+        options: ["여성 1명이 평생 낳을 것으로 예상되는 평균 출생아 수", "한 해 동안 태어난 총 아기의 수", "결혼한 부부 당 평균 자녀 수"],
+        answer: 0,
+        desc: "합계 출산율은 가임 여성(15~49세) 1명이 평생 낳을 것으로 기대되는 평균 출생아 수입니다."
+    },
+    {
+        question: "고령화 사회로 접어들면서 가파르게 증가하는 국가 재정 지출은?",
+        options: ["사회보장비(의료비·연금 등)", "초등 교육 예산", "군 입대 병력 유지를 위한 국방비"],
+        answer: 0,
+        desc: "노인 의료비 부담 증가와 국민연금 지출 확대로 사회보장 비용 부담이 늘어납니다."
+    },
+    {
+        question: "유소년 인구(0~14세) 대비 노인 인구(65세 이상)의 비율을 뜻하는 지표는?",
+        options: ["노령화 지수", "노년 부양비", "합계 출산율"],
+        answer: 0,
+        desc: "노령화 지수는 (65세 이상 인구 / 0~14세 유소년 인구) × 100으로 산출합니다."
+    },
+    {
+        question: "저출산으로 인한 학령인구 감소가 가져오는 사회적 변화는?",
+        options: ["학교 폐교 및 교원 수 감소", "유치원 및 어린이집 대폭 신설", "청소년 수련 시설의 급증"],
+        answer: 0,
+        desc: "학생 수가 줄어들면서 지방 및 도심 내 학교의 폐교와 학급 축소가 일어납니다."
+    },
+    {
+        question: "고령자의 경제적 안정을 돕고 인력 부족을 완화하기 위한 대책은?",
+        options: ["정년 연장 및 노인 일자리 창출", "노인 은퇴 연령의 조기 단축", "고령자 청년 전직 금지"],
+        answer: 0,
+        desc: "정년 연장과 맞춤형 노인 일자리 사업은 고령자의 삶의 질을 높이고 노동력을 보완합니다."
+    },
+    {
+        question: "저출산 현상의 사회적 원인 중 하나로 올바른 것은?",
+        options: ["결혼과 가족에 대한 가치관의 변화", "정부의 자녀 출산 강제 정책", "노년 인구의 급격한 유입"],
+        answer: 0,
+        desc: "결혼을 필수라 생각하지 않거나 자녀에 대한 가치관이 다양해진 점도 원인입니다."
+    },
+    {
+        question: "저출산·고령화로 인해 생산인구가 감소할 때 일어나는 노동시장 변화는?",
+        options: ["기업의 만성적인 일손 및 노동력 부족", "청년 취업 난이도의 극심한 하락", "임금 수준의 전반적인 급락"],
+        answer: 0,
+        desc: "생산연령인구가 크게 감소하면 산업현장의 일손이 부족해지는 인력난이 발생합니다."
+    },
+    {
+        question: "가정과 일터의 양립을 지원하여 저출산 극복을 돕는 제도로 적절한 것은?",
+        options: ["유연근무제 및 시공간 자유 근무제", "야간 연장 근무 의무화", "육아휴직 기간 단축"],
+        answer: 0,
+        desc: "유연근무제와 칼퇴근 문화 조성 등은 일과 육아를 함께할 수 있게 돕습니다."
+    },
+    {
+        question: "총부양비(Total Dependency Ratio)를 구하는 공식은?",
+        options: ["[(유소년인구 + 노인인구) / 생산연령인구] × 100", "(노인인구 / 유소년인구) × 100", "(생산연령인구 / 전체인구) × 100"],
+        answer: 0,
+        desc: "총부양비는 생산연령인구 100명이 부담하는 유소년 및 노년 인구의 합입니다."
+    },
+    {
+        question: "고령화에 대비하여 개인이 준비해야 할 바람직한 자세는?",
+        options: ["노후 대비 자산 관리 및 건강 증진 노력", "은퇴 후 경제 활동 완전 중단", "자녀에게만 전적으로 노후 의존"],
+        answer: 0,
+        desc: "건강 관리와 노후 자금 마련 등 지속적인 자기 관리가 개인 차원에서 필요합니다."
+    },
+    {
+        question: "저출산·고령사회 문제를 해결하기 위해 가장 요구되는 다각적 자세는?",
+        options: ["정부, 기업, 개인 모두의 종합적 협력", "오직 정부에만 대책 요구하기", "문제 완화를 위한 개인 노력 포기"],
+        answer: 0,
+        desc: "정부의 주거·양육 정책, 기업의 일·가정 양립 문화, 개인의 인식 변화가 함께 이뤄져야 합니다."
+    }
+];
+
+// 속도 테이블 (더 스피디하고 속도감 있게 상향 조정)
+const SPEED_TABLE = [
+    { level: 1, name: "LV.1 스피드 구보", speed: 6.5, color: "#38bdf8" },
+    { level: 2, name: "LV.2 질주 속보", speed: 9.5, color: "#34d399" },
+    { level: 3, name: "LV.3 신나는 습보", speed: 13.0, color: "#fbbf24" },
+    { level: 4, name: "LV.4 번개 라이딩", speed: 17.5, color: "#f43f5e" },
+    { level: 5, name: "LV.5 최고속도 갤럽", speed: 22.0, color: "#a855f7" }
+];
+
+// ==========================================
+// 3. 2D 승마 경기장 Engine
+// ==========================================
+class HorseGame2D {
+    constructor() {
+        this.canvas = document.getElementById('gameCanvas');
+        this.ctx = this.canvas.getContext('2d');
+        
+        this.resize();
+
+        // Game State
+        this.isPlaying = false;
+        this.score = 0;
+        this.hp = 3;
+        this.combo = 0;
+        this.maxCombo = 0;
+        this.speedLevelIdx = 0;
+        
+        // World / Entities
+        this.cameraX = 0;
+        this.groundY = this.height * 0.72;
+
+        // Player (Horse & Rider)
+        this.player = {
+            x: 120,
+            y: this.groundY,
+            vy: 0,
+            isJumping: false,
+            isStumbling: false,
+            stumbleTimer: 0,
+            frame: 0
+        };
+
+        this.activeHurdleIdx = 0;
+        this.hurdleDistance = 850; // 허들 간 간격
+        this.hurdles = [];
+        this.approachingHurdle = false;
+        this.pendingResult = null;
+        
+        this.wrongHistory = [];
+        this.lastGallopTime = 0;
+
+        // UI Elements
+        this.hudHp = document.getElementById('hud-hp');
+        this.hudScore = document.getElementById('hud-score');
+        this.hudCombo = document.getElementById('hud-combo');
+        this.hudHurdle = document.getElementById('hud-hurdle');
+        this.speedBadge = document.getElementById('speed-badge');
+        this.quizContainer = document.getElementById('quiz-container');
+        this.quizQuestion = document.getElementById('quiz-question');
+        this.comboPopup = document.getElementById('combo-popup');
+
+        this.bindEvents();
+    }
+
+    resize() {
+        const container = document.getElementById('canvas-container');
+        this.width = container.clientWidth;
+        this.height = container.clientHeight;
+        this.canvas.width = this.width;
+        this.canvas.height = this.height;
+        this.groundY = this.height * 0.72;
+        if (this.player) {
+            this.player.y = this.groundY;
+        }
+    }
+
+    bindEvents() {
+        window.addEventListener('resize', () => this.resize());
+
+        const optionBtns = document.querySelectorAll('.option-btn');
+        optionBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const selectedOpt = parseInt(btn.getAttribute('data-opt'), 10);
+                this.submitAnswer(selectedOpt);
+            });
+        });
+
+        document.getElementById('btn-start').addEventListener('click', () => {
+            sounds.init();
+            this.startGame();
+        });
+        document.getElementById('btn-restart').addEventListener('click', () => {
+            sounds.init();
+            this.startGame();
+        });
+        document.getElementById('btn-howto').addEventListener('click', () => {
+            document.getElementById('screen-start').classList.add('hidden');
+            document.getElementById('screen-study').classList.remove('hidden');
+        });
+        document.getElementById('btn-close-study').addEventListener('click', () => {
+            document.getElementById('screen-study').classList.add('hidden');
+            document.getElementById('screen-start').classList.remove('hidden');
+        });
+    }
+
+    setupHurdles() {
+        this.hurdles = [];
+        const startX = 650;
+
+        for (let i = 0; i < QUIZ_DATABASE.length; i++) {
+            this.hurdles.push({
+                x: startX + i * this.hurdleDistance,
+                quiz: QUIZ_DATABASE[i],
+                cleared: false,
+                passed: false
+            });
+        }
+    }
+
+    updateHUD() {
+        this.hudHp.textContent = '❤️'.repeat(Math.max(0, this.hp));
+        this.hudScore.textContent = this.score;
+        this.hudCombo.textContent = this.combo;
+        
+        const speedObj = SPEED_TABLE[this.speedLevelIdx];
+        this.speedBadge.textContent = speedObj.name;
+        this.speedBadge.style.backgroundColor = speedObj.color;
+
+        const remaining = this.hurdles.filter(h => !h.cleared).length;
+        this.hudHurdle.textContent = `${remaining} / ${QUIZ_DATABASE.length}`;
+    }
+
+    startGame() {
+        this.isPlaying = true;
+        this.score = 0;
+        this.hp = 3;
+        this.combo = 0;
+        this.maxCombo = 0;
+        this.speedLevelIdx = 0;
+        this.cameraX = 0;
+        this.activeHurdleIdx = 0;
+        this.approachingHurdle = false;
+        this.pendingResult = null;
+        this.wrongHistory = [];
+
+        this.player.x = 120;
+        this.player.y = this.groundY;
+        this.player.vy = 0;
+        this.player.isJumping = false;
+        this.player.isStumbling = false;
+
+        this.setupHurdles();
+
+        document.getElementById('screen-start').classList.add('hidden');
+        document.getElementById('screen-result').classList.add('hidden');
+        document.getElementById('screen-study').classList.add('hidden');
+
+        this.updateHUD();
+        this.loadNextQuiz();
+
+        if (!this.animating) {
+            this.animating = true;
+            this.gameLoop();
+        }
+    }
+
+    loadNextQuiz() {
+        if (this.activeHurdleIdx >= this.hurdles.length) {
+            this.endGame(true);
+            return;
+        }
+
+        const currentQuiz = this.hurdles[this.activeHurdleIdx].quiz;
+        this.quizQuestion.textContent = `Q${this.activeHurdleIdx + 1}. ${currentQuiz.question}`;
+        
+        currentQuiz.options.forEach((optText, idx) => {
+            document.getElementById(`opt-text-${idx}`).textContent = optText;
+        });
+
+        this.quizContainer.classList.remove('hidden');
+    }
+
+    submitAnswer(selectedOpt) {
+        if (this.approachingHurdle) return;
+
+        const currentQuiz = this.hurdles[this.activeHurdleIdx].quiz;
+        const isCorrect = (selectedOpt === currentQuiz.answer);
+
+        this.pendingResult = {
+            isCorrect: isCorrect,
+            quiz: currentQuiz
+        };
+
+        this.quizContainer.classList.add('hidden');
+        this.approachingHurdle = true;
+    }
+
+    triggerHurdleAction() {
+        const result = this.pendingResult;
+        if (!result) return;
+
+        const targetHurdle = this.hurdles[this.activeHurdleIdx];
+
+        if (result.isCorrect) {
+            // 점프 발동
+            this.player.isJumping = true;
+            this.player.vy = -15;
+            sounds.playJump();
+            sounds.playCorrect();
+
+            this.combo++;
+            if (this.combo > this.maxCombo) this.maxCombo = this.combo;
+
+            if (this.combo % 2 === 0 && this.speedLevelIdx < SPEED_TABLE.length - 1) {
+                this.speedLevelIdx++;
+            }
+
+            const speedMultiplier = SPEED_TABLE[this.speedLevelIdx].level;
+            this.score += 100 * speedMultiplier + (this.combo * 25);
+
+            this.showComboPopup(`정답! JUMP! x${this.combo}`);
+        } else {
+            // 허들 충돌 (걸림)
+            this.player.isStumbling = true;
+            this.player.stumbleTimer = 28;
+            sounds.playWrong();
+
+            this.hp--;
+            this.combo = 0;
+            this.speedLevelIdx = 0;
+
+            this.wrongHistory.push({
+                question: result.quiz.question,
+                correctAnswer: result.quiz.options[result.quiz.answer],
+                desc: result.quiz.desc
+            });
+
+            this.showComboPopup(`오답! 걸림! HP -1`);
+        }
+
+        if (targetHurdle) {
+            targetHurdle.cleared = true;
+        }
+
+        this.updateHUD();
+
+        if (this.hp <= 0) {
+            setTimeout(() => this.endGame(false), 700);
+        } else {
+            this.activeHurdleIdx++;
+            setTimeout(() => {
+                this.approachingHurdle = false;
+                this.pendingResult = null;
+                if (this.isPlaying) this.loadNextQuiz();
+            }, 1000);
+        }
+    }
+
+    showComboPopup(text) {
+        this.comboPopup.textContent = text;
+        this.comboPopup.classList.add('show');
+        setTimeout(() => this.comboPopup.classList.remove('show'), 900);
+    }
+
+    endGame(isClear) {
+        this.isPlaying = false;
+        
+        document.getElementById('result-title').textContent = isClear ? "🎉 20문항 대장정 완료! 허들 도장깨기 성공!" : "💥 아쉬워요! 체력이 소진되었습니다";
+        document.getElementById('res-score').textContent = this.score;
+        document.getElementById('res-speed').textContent = SPEED_TABLE[this.speedLevelIdx].name;
+        document.getElementById('res-combo').textContent = this.maxCombo;
+
+        const reviewList = document.getElementById('review-list');
+        if (this.wrongHistory.length === 0) {
+            reviewList.innerHTML = `<div style="text-align:center; color:#34d399;">👏 완벽합니다! 20개 허들 문제를 완벽히 해결하셨습니다!</div>`;
+        } else {
+            reviewList.innerHTML = this.wrongHistory.map(item => `
+                <div class="review-item">
+                    <div class="review-q">Q. ${item.question}</div>
+                    <div class="review-a">정답: ${item.correctAnswer}</div>
+                    <div class="review-desc">💡 ${item.desc}</div>
+                </div>
+            `).join('');
+        }
+
+        document.getElementById('screen-result').classList.remove('hidden');
+    }
+
+    update() {
+        if (!this.isPlaying) return;
+
+        const currentSpeedObj = SPEED_TABLE[this.speedLevelIdx];
+        const moveSpeed = this.approachingHurdle ? currentSpeedObj.speed : currentSpeedObj.speed * 0.45;
+
+        this.player.x += moveSpeed;
+        this.cameraX = this.player.x - 150;
+
+        // 말 달리기 발굽 오디오
+        if (Date.now() - this.lastGallopTime > 280 / (moveSpeed * 0.45)) {
+            if (!this.player.isJumping) {
+                sounds.playGallop(currentSpeedObj.level);
+            }
+            this.lastGallopTime = Date.now();
+        }
+
+        // 점프 물리
+        if (this.player.isJumping) {
+            this.player.y += this.player.vy;
+            this.player.vy += 0.85; // 중력
+
+            if (this.player.y >= this.groundY) {
+                this.player.y = this.groundY;
+                this.player.isJumping = false;
+                this.player.vy = 0;
+            }
+        }
+
+        // 걸림 피격 애니메이션 타이머
+        if (this.player.isStumbling) {
+            this.player.stumbleTimer--;
+            if (this.player.stumbleTimer <= 0) {
+                this.player.isStumbling = false;
+            }
+        }
+
+        // 허들 접근 판정
+        if (this.approachingHurdle && this.pendingResult) {
+            const targetHurdle = this.hurdles[this.activeHurdleIdx];
+            if (targetHurdle && (targetHurdle.x - this.player.x) < 85) {
+                this.triggerHurdleAction();
+            }
+        }
+
+        this.player.frame += moveSpeed * 0.09;
+    }
+
+    drawSkyAndMountains() {
+        // Sky Gradient
+        const skyGradient = this.ctx.createLinearGradient(0, 0, 0, this.height);
+        skyGradient.addColorStop(0, '#0f172a');
+        skyGradient.addColorStop(0.6, '#1e293b');
+        skyGradient.addColorStop(1, '#334155');
+        this.ctx.fillStyle = skyGradient;
+        this.ctx.fillRect(0, 0, this.width, this.height);
+
+        // Sun / Moon
+        this.ctx.fillStyle = '#fef08a';
+        this.ctx.beginPath();
+        this.ctx.arc(this.width * 0.8, 80, 36, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        // Parallax Mountains
+        this.ctx.fillStyle = '#1e293b';
+        this.ctx.beginPath();
+        const mountainOffset = (this.cameraX * 0.1) % 400;
+        for (let x = -400; x < this.width + 400; x += 300) {
+            const px = x - mountainOffset;
+            this.ctx.lineTo(px, this.groundY);
+            this.ctx.lineTo(px + 150, this.groundY - 140);
+            this.ctx.lineTo(px + 300, this.groundY);
+        }
+        this.ctx.fill();
+
+        // Parallax Hills
+        this.ctx.fillStyle = '#0f766e';
+        this.ctx.beginPath();
+        const hillOffset = (this.cameraX * 0.3) % 300;
+        for (let x = -300; x < this.width + 300; x += 200) {
+            const px = x - hillOffset;
+            this.ctx.lineTo(px, this.groundY);
+            this.ctx.lineTo(px + 100, this.groundY - 70);
+            this.ctx.lineTo(px + 200, this.groundY);
+        }
+        this.ctx.fill();
+    }
+
+    drawTrack() {
+        // Ground / Dirt Track
+        this.ctx.fillStyle = '#78350f';
+        this.ctx.fillRect(0, this.groundY, this.width, this.height - this.groundY);
+
+        // Grass Top Edge
+        this.ctx.fillStyle = '#22c55e';
+        this.ctx.fillRect(0, this.groundY - 8, this.width, 10);
+
+        // Track Speed Lines
+        this.ctx.strokeStyle = '#b45309';
+        this.ctx.lineWidth = 3;
+        const lineOffset = (this.cameraX) % 80;
+        for (let x = -80; x < this.width + 80; x += 80) {
+            this.ctx.beginPath();
+            this.ctx.moveTo(x - lineOffset, this.groundY + 25);
+            this.ctx.lineTo(x - lineOffset + 40, this.groundY + 25);
+            this.ctx.stroke();
+
+            this.ctx.beginPath();
+            this.ctx.moveTo(x - lineOffset + 20, this.groundY + 50);
+            this.ctx.lineTo(x - lineOffset + 60, this.groundY + 50);
+            this.ctx.stroke();
+        }
+    }
+
+    drawHurdles() {
+        this.hurdles.forEach((hurdle, index) => {
+            const screenX = hurdle.x - this.cameraX;
+            if (screenX > -100 && screenX < this.width + 100) {
+                const hurdleY = this.groundY;
+
+                // Hurdle Posts
+                this.ctx.fillStyle = hurdle.cleared ? '#94a3b8' : '#d97706';
+                this.ctx.fillRect(screenX, hurdleY - 55, 8, 55);
+                this.ctx.fillRect(screenX + 40, hurdleY - 55, 8, 55);
+
+                // Hurdle Bars (White / Red Stripe)
+                const barY1 = hurdleY - 45;
+                const barY2 = hurdleY - 25;
+
+                [barY1, barY2].forEach(y => {
+                    this.ctx.fillStyle = '#ffffff';
+                    this.ctx.fillRect(screenX, y, 48, 8);
+
+                    // Red Stripes
+                    this.ctx.fillStyle = hurdle.cleared ? '#64748b' : '#ef4444';
+                    this.ctx.fillRect(screenX + 10, y, 10, 8);
+                    this.ctx.fillRect(screenX + 30, y, 10, 8);
+                });
+
+                // Hurdle Number Badge
+                this.ctx.fillStyle = '#fbbf24';
+                this.ctx.beginPath();
+                this.ctx.arc(screenX + 24, hurdleY - 75, 14, 0, Math.PI * 2);
+                this.ctx.fill();
+
+                this.ctx.fillStyle = '#0f172a';
+                this.ctx.font = 'bold 12px Pretendard';
+                this.ctx.textAlign = 'center';
+                this.ctx.textBaseline = 'middle';
+                this.ctx.fillText(`Q${index + 1}`, screenX + 24, hurdleY - 74);
+            }
+        });
+    }
+
+    draw2DHorseAndRider() {
+        const screenX = this.player.x - this.cameraX;
+        const screenY = this.player.y;
+        const f = Math.sin(this.player.frame);
+
+        this.ctx.save();
+        this.ctx.translate(screenX, screenY);
+
+        if (this.player.isStumbling) {
+            this.ctx.rotate(-0.3); // 오답 피격 회전
+        }
+
+        // Shadow
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+        this.ctx.beginPath();
+        this.ctx.ellipse(0, 0, 35, 8, 0, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        // --- HORSE BODY ---
+        // Coat Color
+        this.ctx.fillStyle = '#7c2d12';
+
+        // Legs Animation
+        const leg1Angle = f * 0.6;
+        const leg2Angle = -f * 0.6;
+
+        // Back Legs
+        this.ctx.fillRect(-22 + leg2Angle * 10, -25, 7, 25);
+        this.ctx.fillRect(-12 + leg1Angle * 10, -25, 7, 25);
+
+        // Front Legs
+        this.ctx.fillRect(15 + leg1Angle * 10, -25, 7, 25);
+        this.ctx.fillRect(25 + leg2Angle * 10, -25, 7, 25);
+
+        // Torso Body
+        this.ctx.beginPath();
+        this.ctx.ellipse(0, -32, 32, 18, 0, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        // Neck
+        this.ctx.beginPath();
+        this.ctx.moveTo(15, -38);
+        this.ctx.lineTo(32, -62);
+        this.ctx.lineTo(20, -65);
+        this.ctx.lineTo(5, -42);
+        this.ctx.closePath();
+        this.ctx.fill();
+
+        // Head
+        this.ctx.beginPath();
+        this.ctx.ellipse(32, -64, 14, 8, 0.3, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        // Dark Muzzle
+        this.ctx.fillStyle = '#271c19';
+        this.ctx.beginPath();
+        this.ctx.arc(42, -61, 5, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        // Eye
+        this.ctx.fillStyle = '#ffffff';
+        this.ctx.beginPath();
+        this.ctx.arc(33, -66, 2.5, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        // Mane (Black)
+        this.ctx.fillStyle = '#1c1917';
+        this.ctx.fillRect(10, -66, 6, 20);
+        this.ctx.fillRect(16, -56, 6, 18);
+
+        // Tail
+        this.ctx.beginPath();
+        this.ctx.moveTo(-30, -38);
+        this.ctx.lineTo(-45 + f * 5, -20);
+        this.ctx.lineTo(-35, -20);
+        this.ctx.closePath();
+        this.ctx.fill();
+
+        // --- RIDER ---
+        // Saddle
+        this.ctx.fillStyle = '#451a03';
+        this.ctx.fillRect(-8, -48, 16, 5);
+
+        // Rider Body (Blue Jacket)
+        this.ctx.fillStyle = '#1e3a8a';
+        this.ctx.fillRect(-6, -66, 12, 18);
+
+        // Helmet
+        this.ctx.fillStyle = '#0f172a';
+        this.ctx.beginPath();
+        this.ctx.arc(0, -72, 7, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        this.ctx.restore();
+    }
+
+    render() {
+        this.ctx.clearRect(0, 0, this.width, this.height);
+
+        this.drawSkyAndMountains();
+        this.drawTrack();
+        this.drawHurdles();
+        this.draw2DHorseAndRider();
+    }
+
+    gameLoop() {
+        this.update();
+        this.render();
+        requestAnimationFrame(() => this.gameLoop());
+    }
+}
+
+// 게임 인스턴스 실행
+window.onload = () => {
+    new HorseGame2D();
+};
+</script>
+</body>
+</html>
